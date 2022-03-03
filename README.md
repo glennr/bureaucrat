@@ -114,19 +114,42 @@ end
 
 Channels docs output is currently only supported by the `Bureaucrat.MarkdownWriter` and only to the `default_path` (see [Configuration](#configuration) below).
 
-## Swagger & Slate Integration
+## OpenAPI (OAS3) / Swagger & Slate Integration
 
-Bureaucrat comes with the `Bureaucrat.SwaggerSlateMarkdownWriter` backend that will merge test examples with a swagger spec to produce markdown files that can be processed with the [slate](https://github.com/lord/slate) static generator.
+Bureaucrat comes with the `Bureaucrat.OpenApiSlateMarkdownWriter` and
+`Bureaucrat.SwaggerSlateMarkdownWriter` backends that will merge test examples
+with a swagger spec to produce markdown files that can be processed with the
+[slate](https://github.com/lord/slate) static generator.
 
-To configure swagger integration, first write a swagger file by hand or generate one using [phoenix_swagger](https://github.com/xerions/phoenix_swagger). In the example below, the swagger file exists in the project at `priv/static/swagger.json`.
-
-Clone the slate project into a directory in your project:
+First, clone the Slate project into a directory in your project:
 
 ```
 git clone --shallow https://github.com/lord/slate doc
 ```
 
+### OpenAPI/OAS3
+
+To configure the OAS integration, first write a swagger file by hand or generate
+one using [OpenApiSpec](https://github.com/open-api-spex/open_api_spex).
+
+In the example below, the swagger file exists in the project at `priv/static/swagger.json`.
+
 Configure Bureaucrat `writer`, `default_path` and `swagger`:
+
+```elixir
+Bureaucrat.start(
+  env_var: "DOC",
+  writer: Bureaucrat.OpenApiSlateMarkdownWriter,
+  default_path: "doc/source/index.html.md",
+  swagger: "priv/static/swagger.json" |> File.read!() |> Poison.decode!())
+```
+
+### OpenAPI/OAS3
+
+To configure a Swagger integration, take your Swagger (v2) definition (e.g. via
+[phoenix_swagger](https://github.com/xerions/phoenix_swagger), and configure the
+Bureaucrat `writer`, `default_path` and `swagger`:
+
 
 ```elixir
 Bureaucrat.start(
@@ -135,6 +158,10 @@ Bureaucrat.start(
   default_path: "doc/source/index.html.md",
   swagger: "priv/static/swagger.json" |> File.read!() |> Poison.decode!())
 ```
+
+In this example, the swagger file exists in the project at `priv/static/swagger.json`.
+
+### Testing
 
 Within each test, link the test example to a swagger operation by passing an `operation_id` to the `doc` helper:
 

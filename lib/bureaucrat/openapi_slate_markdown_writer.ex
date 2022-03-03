@@ -118,12 +118,13 @@ defmodule Bureaucrat.OpenApiSlateMarkdownWriter do
   The example json is output before the table just so slate will align them.
   """
   def write_model(file, swagger, {name, model_schema}) do
+    IO.inspect(model_schema)
     file
     |> puts("## #{name}\n")
     |> puts("#{model_schema["description"]}")
     |> write_model_example(model_schema)
-    |> puts("|Property|Description|Type|Required|")
-    |> puts("|--------|-----------|----|--------|")
+    |> puts("|Property|Description|Type|Format|Required|")
+    |> puts("|--------|-----------|----|------|--------|")
     |> write_model_properties(swagger, model_schema)
     |> puts("")
   end
@@ -154,9 +155,9 @@ defmodule Bureaucrat.OpenApiSlateMarkdownWriter do
     ordered = Enum.concat(primitives, objects)
 
     Enum.each(ordered, fn {property, property_details} ->
-      {property_details, type} = resolve_type(swagger, property_details)
+      {property_details, type, format} = resolve_type(swagger, property_details)
       required? = is_required(property, model_schema)
-      write_model_property(file, swagger, "#{prefix}#{property}", property_details, type, required?)
+      write_model_property(file, swagger, "#{prefix}#{property}", property_details, type, format, required?)
     end)
 
     file
@@ -166,28 +167,28 @@ defmodule Bureaucrat.OpenApiSlateMarkdownWriter do
     schema_name = String.replace_prefix(schema_ref, "#/definitions/", "")
     property_details = swagger["definitions"][schema_name]
     type = schema_ref_to_link(schema_ref)
-    {property_details, type}
+    {property_details, type, nil}
   end
 
   def resolve_type(_swagger, property_details) do
-    {property_details, property_details["type"]}
+    {property_details, property_details["type"], property_details["format"]}
   end
 
-  def write_model_property(file, swagger, property, property_details, "object", _required?) do
+  def write_model_property(file, swagger, property, property_details, "object", _format, _required?) do
     write_model_properties(file, swagger, property_details, "#{property}.")
   end
 
-  def write_model_property(file, swagger, property, property_details, "array", required?) do
+  def write_model_property(file, swagger, property, property_details, "array", format, required?) do
     schema = property_details["items"]
 
     # TODO: handle arrays with inline schema
     schema_ref = if schema != nil, do: schema["$ref"], else: nil
     type = if schema_ref != nil, do: "array(#{schema_ref_to_link(schema_ref)})", else: "array(any)"
-    write_model_property(file, swagger, property, property_details, type, required?)
+    write_model_property(file, swagger, property, property_details, type, format, required?)
   end
 
-  def write_model_property(file, _swagger, property, property_details, type, required?) do
-    puts(file, "|#{property}|#{property_details["description"]}|#{type}|#{required?}|")
+  def write_model_property(file, _swagger, property, property_details, type, format, required?) do
+    puts(file, "|#{property}|#{property_details["description"]}|#{type}|#{format}|#{required?}|")
   end
 
   defp is_required(property, %{"required" => required}), do: property in required
